@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle de Gastos Pessoais</title>
+  <style>
+    /* Estilos gerais e reset básico */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: #f4f7f6;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    /* Cartão principal do formulário */
+    .container {
+      background-color: #ffffff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 420px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      color: #1e293b;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .campo {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #475569;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #10b981;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background-color: #10b981;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      margin-top: 8px;
+    }
+
+    button:hover {
+      background-color: #059669;
+    }
+
+    /* Visual do botão enquanto estiver enviando */
+    button:disabled {
+      background-color: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    /* Caixa de mensagens de feedback */
+    #mensagem {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      text-align: center;
+      display: none; /* Começa escondida */
+    }
+
+    .sucesso {
+      background-color: #d1fae5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+
+    .erro {
+      background-color: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>💸 Novo Gasto</h1>
+    
+    <form id="formGastos">
+      <div class="campo">
+        <label for="descricao">Descrição</label>
+        <input type="text" id="descricao" placeholder="Ex: Almoço no restaurante" required>
+      </div>
+
+      <div class="campo">
+        <label for="categoria">Categoria</label>
+        <select id="categoria" required>
+          <option value="" disabled selected>Selecione uma categoria...</option>
+          <option value="Alimentação">Alimentação</option>
+          <option value="Transporte">Transporte</option>
+          <option value="Lazer">Lazer</option>
+          <option value="Estudos">Estudos</option>
+          <option value="Outros">Outros</option>
+        </select>
+      </div>
+
+      <div class="campo">
+        <label for="valor">Valor (R$)</label>
+        <input type="number" id="valor" step="0.01" min="0.01" placeholder="0,00" required>
+      </div>
+
+      <button type="submit" id="btnSalvar">Salvar Gasto</button>
+    </form>
+
+    <div id="mensagem"></div>
+  </div>
+
+  <script>
+    // Cole aqui a URL gerada após implantar o Google Apps Script
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyqaaFjVVPKN2EnD_weZUC_XO__j-Lr-Ugha8mGbGZ-m-86ME_Wl4KXJErf1RGed63N/exec";
+
+    // Pegando os elementos da tela para manipular com JavaScript
+    const form = document.getElementById("formGastos");
+    const btnSalvar = document.getElementById("btnSalvar");
+    const divMensagem = document.getElementById("mensagem");
+
+    // Escuta o evento de envio (submit) do formulário
+    form.addEventListener("submit", function(evento) {
+      evento.preventDefault(); // Evita que a página recarregue ao enviar
+
+      // 1. Desabilita o botão e muda o texto para dar feedback visual
+      btnSalvar.disabled = true;
+      btnSalvar.textContent = "Salvando...";
+      divMensagem.style.display = "none";
+
+      // 2. Coleta os valores digitados nos campos
+      const dadosDoGasto = {
+        descricao: document.getElementById("descricao").value,
+        categoria: document.getElementById("categoria").value,
+        valor: parseFloat(document.getElementById("valor").value)
+      };
+
+      // 3. Envia os dados para o Google Apps Script usando fetch()
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8" // Evita bloqueio de CORS no navegador
+        },
+        body: JSON.stringify(dadosDoGasto) // Transforma o objeto em texto JSON
+      })
+      .then(response => response.json()) // Lê a resposta JSON devolvida pelo Apps Script
+      .then(resultado => {
+        if (resultado.status === "sucesso") {
+          mostrarMensagem("Gasto salvo com sucesso na planilha!", "sucesso");
+          form.reset(); // Limpa todos os campos do formulário
+        } else {
+          mostrarMensagem("Erro ao salvar: " + resultado.mensagem, "erro");
+        }
+      })
+      .catch(erro => {
+        mostrarMensagem("Erro de conexão. Verifique a URL do script.", "erro");
+        console.error("Detalhes do erro:", erro);
+      })
+      .finally(() => {
+        // 4. Reabilita o botão independentemente de ter dado certo ou errado
+        btnSalvar.disabled = false;
+        btnSalvar.textContent = "Salvar Gasto";
+      });
+    });
+
+    // Função auxiliar para exibir mensagens de sucesso ou erro
+    function mostrarMensagem(texto, tipo) {
+      divMensagem.textContent = texto;
+      divMensagem.className = tipo; // Aplica a classe CSS .sucesso ou .erro
+      divMensagem.style.display = "block";
+    }
+  </script>
+
+</body>
+</html>
